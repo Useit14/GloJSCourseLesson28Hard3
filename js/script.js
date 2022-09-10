@@ -1,49 +1,81 @@
-const filterByType = (type, ...values) => values.filter(value => typeof value === type),
+/* eslint-disable indent */
+const input = document.querySelector(".form__input");
+const form = document.querySelector("#form");
+const btnBack = document.querySelector("#btn-back");
+let isTo = true;
 
-	hideAllResponseBlocks = () => {
-		const responseBlocksArray = Array.from(document.querySelectorAll('div.dialog__response-block'));
-		responseBlocksArray.forEach(block => block.style.display = 'none');
-	},
+const getData = (formData) => {
+  const formBody = {};
+  for (let [name, value] of formData) {
+    formBody[name] = parseInt(value) ? +value : value;
+  }
 
-	showResponseBlock = (blockSelector, msgText, spanSelector) => {
-		hideAllResponseBlocks();
-		document.querySelector(blockSelector).style.display = 'block';
-		if (spanSelector) {
-			document.querySelector(spanSelector).textContent = msgText;
-		}
-	},
+  const myHeaders = new Headers();
+  myHeaders.append("apikey", "oFFRlLZ75b0HA7TGNLRo0SFrZESvWhXa");
 
-	showError = msgText => showResponseBlock('.dialog__response-block_error', msgText, '#error'),
+  const requestOptions = {
+    method: "GET",
+    redirect: "follow",
+    headers: myHeaders,
+  };
 
-	showResults = msgText => showResponseBlock('.dialog__response-block_ok', msgText, '#ok'),
+  return fetch(
+    `https://api.apilayer.com/currency_data/convert?to=${
+      isTo ? formBody.selectTo : formBody.selectFrom
+    }&from=${isTo ? formBody.selectFrom : formBody.selectTo}&amount=${
+      formBody.amount
+    }`,
+    requestOptions
+  ).then((response) => response.json());
+};
 
-	showNoResults = () => showResponseBlock('.dialog__response-block_no-results'),
+const hideAllResponseBlocks = () => {
+  const responseBlocksArray = Array.from(
+    document.querySelectorAll("div.dialog__response-block")
+  );
+  responseBlocksArray.forEach((block) => (block.style.display = "none"));
+};
+const showResponseBlock = (blockSelector, msgText, spanSelector) => {
+  hideAllResponseBlocks();
+  document.querySelector(blockSelector).style.display = "block";
+  if (spanSelector) {
+    document.querySelector(spanSelector).textContent = msgText;
+  }
+};
+const showError = (msgText) =>
+  showResponseBlock(".dialog__response-block_error", msgText, "#error");
+const showResults = (msgText) =>
+  showResponseBlock(".dialog__response-block_ok", msgText, "#ok");
+const showNoResults = () =>
+  showResponseBlock(".dialog__response-block_no-results");
 
-	tryFilterByType = (type, values) => {
-		try {
-			const valuesArray = eval(`filterByType('${type}', ${values})`).join(", ");
-			const alertMsg = (valuesArray.length) ?
-				`Данные с типом ${type}: ${valuesArray}` :
-				`Отсутствуют данные типа ${type}`;
-			showResults(alertMsg);
-		} catch (e) {
-			showError(`Ошибка: ${e}`);
-		}
-	};
+const changeСurrency = () => {
+  const selectTo = document.querySelector("#to");
+  const selectFrom = document.querySelector("#from");
 
-const filterButton = document.querySelector('#filter-btn');
+  const bound = document.querySelector("#bound");
+  bound.before(isTo ? selectFrom : selectTo);
+  bound.after(isTo ? selectTo : selectFrom);
+};
 
-filterButton.addEventListener('click', e => {
-	const typeInput = document.querySelector('#type');
-	const dataInput = document.querySelector('#data');
+if (form) {
+  form.addEventListener("submit", (e) => {
+    if (input.value === "") {
+      showNoResults();
+    } else {
+      const formData = new FormData(form);
+      e.preventDefault();
+      getData(formData)
+        .then((data) => showResults(data.result))
+        .catch((error) => showError(error));
+    }
+  });
 
-	if (dataInput.value === '') {
-		dataInput.setCustomValidity('Поле не должно быть пустым!');
-		showNoResults();
-	} else {
-		dataInput.setCustomValidity('');
-		e.preventDefault();
-		tryFilterByType(typeInput.value.trim(), dataInput.value.trim());
-	}
-});
-
+  if (btnBack) {
+    btnBack.addEventListener("click", (e) => {
+      e.preventDefault();
+      isTo = !isTo;
+      changeСurrency();
+    });
+  }
+}
